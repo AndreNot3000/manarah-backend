@@ -1,0 +1,229 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  STUDENT
+  TUTOR
+  ADMIN
+}
+
+enum TutorStatus {
+  PENDING
+  VERIFIED
+  PREMIUM
+}
+
+enum TutorSubjectType {
+  QURAN
+  TAJWEED
+  HIFZ
+  ARABIC
+  ISLAMIC_STUDIES
+}
+
+enum InquiryStatus {
+  PENDING
+  RESPONDED
+  CLOSED
+}
+
+enum CompetitionStatus {
+  DRAFT
+  OPEN
+  CLOSED
+  RESULTS_PUBLISHED
+}
+
+enum CompetitionType {
+  QURAN_RECITATION
+  HIFZ
+  ISLAMIC_QUIZ
+  ARABIC_COMPETITION
+  ESSAY_COMPETITION
+}
+
+enum RegistrationStatus {
+  PENDING
+  CONFIRMED
+  REJECTED
+}
+
+enum PaymentStatus {
+  PENDING
+  CONFIRMED
+  REJECTED
+}
+
+enum CertificateType {
+  PARTICIPATION
+  ACHIEVEMENT
+  WINNER
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  role         UserRole
+  createdAt    DateTime @default(now())
+
+  studentProfile           StudentProfile?
+  tutorProfile             TutorProfile?
+  competitionRegistrations CompetitionRegistration[]
+  payments                 Payment[]
+  certificates             Certificate[]
+  notifications            Notification[]
+  savedTutors              SavedTutor[]              @relation("StudentSavedTutors")
+  tutorInquiriesSent       TutorInquiry[]            @relation("StudentInquiries")
+}
+
+model StudentProfile {
+  userId    String  @id
+  user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name      String
+  phone     String?
+  avatarUrl String?
+}
+
+model TutorProfile {
+  userId       String      @id
+  user         User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name         String
+  bio          String?
+  photoUrl     String?
+  status       TutorStatus @default(PENDING)
+  pricing      Decimal?    @db.Decimal(10, 2)
+  experience   String?
+  availability String?
+
+  qualifications TutorQualification[]
+  subjects       TutorSubject[]
+  inquiries      TutorInquiry[]
+  savedBy        SavedTutor[]
+}
+
+model TutorQualification {
+  id      String       @id @default(cuid())
+  tutorId String
+  tutor   TutorProfile @relation(fields: [tutorId], references: [userId], onDelete: Cascade)
+  title   String
+  fileUrl String
+}
+
+model TutorSubject {
+  id      String           @id @default(cuid())
+  tutorId String
+  tutor   TutorProfile     @relation(fields: [tutorId], references: [userId], onDelete: Cascade)
+  subject TutorSubjectType
+
+  @@unique([tutorId, subject])
+}
+
+model TutorInquiry {
+  id        String        @id @default(cuid())
+  tutorId   String
+  tutor     TutorProfile  @relation(fields: [tutorId], references: [userId], onDelete: Cascade)
+  studentId String
+  student   User          @relation("StudentInquiries", fields: [studentId], references: [id], onDelete: Cascade)
+  message   String
+  status    InquiryStatus @default(PENDING)
+  createdAt DateTime      @default(now())
+}
+
+model Competition {
+  id          String            @id @default(cuid())
+  title       String
+  description String
+  fee         Decimal           @default(0) @db.Decimal(10, 2)
+  deadline    DateTime
+  category    String
+  type        CompetitionType
+  status      CompetitionStatus @default(DRAFT)
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+
+  registrations CompetitionRegistration[]
+  payments      Payment[]
+  certificates  Certificate[]
+}
+
+model CompetitionRegistration {
+  id            String             @id @default(cuid())
+  competitionId String
+  competition   Competition        @relation(fields: [competitionId], references: [id], onDelete: Cascade)
+  userId        String
+  user          User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  status        RegistrationStatus @default(PENDING)
+  paymentStatus PaymentStatus      @default(PENDING)
+  createdAt     DateTime           @default(now())
+
+  documents CompetitionDocument[]
+
+  @@unique([competitionId, userId])
+}
+
+model CompetitionDocument {
+  id             String                  @id @default(cuid())
+  registrationId String
+  registration   CompetitionRegistration @relation(fields: [registrationId], references: [id], onDelete: Cascade)
+  fileUrl        String
+  fileName       String
+  uploadedAt     DateTime                @default(now())
+}
+
+model Payment {
+  id            String        @id @default(cuid())
+  userId        String
+  user          User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  competitionId String?
+  competition   Competition?  @relation(fields: [competitionId], references: [id], onDelete: SetNull)
+  amount        Decimal       @db.Decimal(10, 2)
+  proofUrl      String?
+  status        PaymentStatus @default(PENDING)
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+}
+
+model Certificate {
+  id            String          @id @default(cuid())
+  userId        String
+  user          User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  competitionId String
+  competition   Competition     @relation(fields: [competitionId], references: [id], onDelete: Cascade)
+  type          CertificateType
+  fileUrl       String
+  issuedAt      DateTime        @default(now())
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title     String
+  body      String
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+}
+
+model Announcement {
+  id        String   @id @default(cuid())
+  title     String
+  body      String
+  createdAt DateTime @default(now())
+}
+
+model SavedTutor {
+  studentId String
+  student   User         @relation("StudentSavedTutors", fields: [studentId], references: [id], onDelete: Cascade)
+  tutorId   String
+  tutor     TutorProfile @relation(fields: [tutorId], references: [userId], onDelete: Cascade)
+  createdAt DateTime     @default(now())
+
+  @@id([studentId, tutorId])
+}
