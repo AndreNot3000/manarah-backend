@@ -1,41 +1,58 @@
 import { Router } from "express";
-import { UserRole } from "@prisma/client";
+import {
+  adminCheckHandler,
+  forgotPasswordHandler,
+  loginHandler,
+  meHandler,
+  registerStudentHandler,
+  registerTutorHandler,
+  resetPasswordHandler,
+} from "../controllers/authController";
 import { authenticate } from "../middleware/authenticate";
+import {
+  loginRateLimiter,
+  passwordResetRateLimiter,
+  registerRateLimiter,
+} from "../middleware/rateLimit";
 import { requireRole } from "../middleware/requireRole";
-import { signToken } from "../utils/jwt";
+import { validateBody } from "../middleware/validate";
+import {
+  forgotPasswordSchema,
+  loginSchema,
+  registerStudentSchema,
+  registerTutorSchema,
+  resetPasswordSchema,
+} from "../validators/auth";
 
 const router = Router();
 
-router.get("/me", authenticate, (req, res) => {
-  res.json({ user: req.user });
-});
+router.post(
+  "/register/student",
+  registerRateLimiter,
+  validateBody(registerStudentSchema),
+  registerStudentHandler
+);
+router.post(
+  "/register/tutor",
+  registerRateLimiter,
+  validateBody(registerTutorSchema),
+  registerTutorHandler
+);
+router.post("/login", loginRateLimiter, validateBody(loginSchema), loginHandler);
+router.post(
+  "/forgot-password",
+  passwordResetRateLimiter,
+  validateBody(forgotPasswordSchema),
+  forgotPasswordHandler
+);
+router.post(
+  "/reset-password",
+  passwordResetRateLimiter,
+  validateBody(resetPasswordSchema),
+  resetPasswordHandler
+);
 
-router.get("/admin/check", authenticate, requireRole("admin"), (_req, res) => {
-  res.json({ ok: true });
-});
-
-// Dev helper to obtain a token for middleware testing (remove or protect in production)
-if (process.env.NODE_ENV !== "production") {
-  router.post("/dev/token", (req, res) => {
-    const { userId, email, role } = req.body as {
-      userId?: string;
-      email?: string;
-      role?: UserRole;
-    };
-
-    if (!userId || !email || !role) {
-      res.status(400).json({ error: "userId, email, and role are required" });
-      return;
-    }
-
-    if (!Object.values(UserRole).includes(role)) {
-      res.status(400).json({ error: "Invalid role" });
-      return;
-    }
-
-    const token = signToken({ userId, email, role });
-    res.json({ token });
-  });
-}
+router.get("/me", authenticate, meHandler);
+router.get("/admin/check", authenticate, requireRole("admin"), adminCheckHandler);
 
 export default router;
