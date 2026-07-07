@@ -12,7 +12,13 @@
     "db:migrate": "prisma migrate dev",
     "db:seed": "prisma db seed",
     "db:studio": "prisma studio",
-    "db:generate": "prisma generate"
+    "db:generate": "prisma generate",
+    "test:auth": "tsx scripts/test-auth.ts",
+    "test:notifications": "tsx scripts/test-notifications.ts",
+    "test:profile": "tsx scripts/test-profile-saved.ts",
+    "test:tutors": "tsx scripts/test-tutors.ts",
+    "test:tutor-profile": "tsx scripts/test-tutor-profile.ts",
+    "test:inquiries": "tsx scripts/test-inquiries.ts"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
@@ -26,13 +32,18 @@
     "cors": "^2.8.5",
     "dotenv": "^16.4.7",
     "express": "^4.21.2",
-    "jsonwebtoken": "^9.0.3"
+    "express-rate-limit": "^8.5.2",
+    "helmet": "^8.2.0",
+    "jsonwebtoken": "^9.0.3",
+    "multer": "^2.2.0",
+    "zod": "^4.4.3"
   },
   "devDependencies": {
     "@types/bcrypt": "^5.0.2",
     "@types/cors": "^2.8.17",
     "@types/express": "^5.0.0",
     "@types/jsonwebtoken": "^9.0.10",
+    "@types/multer": "^2.2.0",
     "@types/node": "^22.10.5",
     "prisma": "^6.2.1",
     "tsx": "^4.19.2",
