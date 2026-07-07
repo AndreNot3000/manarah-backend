@@ -9,6 +9,8 @@ import usersRouter from "./routes/users";
 import studentsRouter from "./routes/students";
 import notificationsRouter from "./routes/notifications";
 import tutorsRouter from "./routes/tutors";
+import competitionsRouter from "./routes/competitions";
+import adminRouter from "./routes/admin";
 
 const app = express();
 const PORT = process.env.PORT ?? 4000;
@@ -31,6 +33,8 @@ app.use("/api/users", usersRouter);
 app.use("/api/students", studentsRouter);
 app.use("/api/notifications", notificationsRouter);
 app.use("/api/tutors", tutorsRouter);
+app.use("/api/competitions", competitionsRouter);
+app.use("/api/admin", adminRouter);
 app.listen(PORT, () => {
   console.log(`MANARAH API running on http://localhost:${PORT}`);
 });

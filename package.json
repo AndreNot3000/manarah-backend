@@ -18,7 +18,13 @@
     "test:profile": "tsx scripts/test-profile-saved.ts",
     "test:tutors": "tsx scripts/test-tutors.ts",
     "test:tutor-profile": "tsx scripts/test-tutor-profile.ts",
-    "test:inquiries": "tsx scripts/test-inquiries.ts"
+    "test:inquiries": "tsx scripts/test-inquiries.ts",
+    "test:competitions": "tsx scripts/test-competitions.ts",
+    "test:registration": "tsx scripts/test-registration.ts",
+    "test:documents": "tsx scripts/test-documents.ts",
+    "test:admin-stats": "tsx scripts/test-admin-stats.ts",
+    "test:admin-users": "tsx scripts/test-admin-users.ts",
+    "test:admin-competitions": "tsx scripts/test-admin-competitions.ts"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
@@ -45,6 +51,7 @@
     "@types/jsonwebtoken": "^9.0.10",
     "@types/multer": "^2.2.0",
     "@types/node": "^22.10.5",
+    "form-data": "^4.0.1",
     "prisma": "^6.2.1",
     "tsx": "^4.19.2",
     "typescript": "^5.7.3"
