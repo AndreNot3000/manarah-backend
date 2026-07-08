@@ -162,6 +162,7 @@ model CompetitionRegistration {
   status        RegistrationStatus @default(PENDING)
   paymentStatus PaymentStatus      @default(PENDING)
   createdAt     DateTime           @default(now())
+  placement     Int?
 
   documents CompetitionDocument[]
 

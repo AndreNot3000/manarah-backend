@@ -6,8 +6,10 @@ import type { Request } from "express";
 
 const AVATAR_DIR = path.join(process.cwd(), "uploads", "avatars");
 const QUALIFICATION_DIR = path.join(process.cwd(), "uploads", "qualifications");
+const COMPETITION_DOCS_DIR = path.join(process.cwd(), "uploads", "competition-docs");
 const MAX_IMAGE_SIZE = 5 * 1024 * 1024; // 5MB
 const MAX_QUALIFICATION_SIZE = 10 * 1024 * 1024; // 10MB
+const MAX_COMPETITION_DOC_SIZE = 10 * 1024 * 1024; // 10MB
 const IMAGE_MIME_TYPES = new Set(["image/jpeg", "image/png", "image/webp", "image/gif"]);
 const QUALIFICATION_MIME_TYPES = new Set([
   "application/pdf",
@@ -15,9 +17,15 @@ const QUALIFICATION_MIME_TYPES = new Set([
   "image/png",
   "image/webp",
 ]);
+const COMPETITION_DOC_MIME_TYPES = new Set([
+  "application/pdf",
+  "image/jpeg",
+  "image/png",
+]);
 
 fs.mkdirSync(AVATAR_DIR, { recursive: true });
 fs.mkdirSync(QUALIFICATION_DIR, { recursive: true });
+fs.mkdirSync(COMPETITION_DOCS_DIR, { recursive: true });
 
 function createImageStorage(directory: string) {
   return multer.diskStorage({
@@ -121,6 +129,47 @@ export function deleteAvatarFile(filename: string | null) {
 export function deleteQualificationFile(filename: string | null) {
   if (!filename) return;
   const filePath = path.join(QUALIFICATION_DIR, filename);
+  if (fs.existsSync(filePath)) {
+    fs.unlinkSync(filePath);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Competition document upload
+// ---------------------------------------------------------------------------
+
+function createCompetitionDocFilter(
+  _req: Request,
+  file: Express.Multer.File,
+  cb: multer.FileFilterCallback
+) {
+  if (!COMPETITION_DOC_MIME_TYPES.has(file.mimetype)) {
+    cb(new Error("Only PDF, JPEG, and PNG files are allowed for competition documents"));
+    return;
+  }
+  cb(null, true);
+}
+
+export const competitionDocUpload = multer({
+  storage: multer.diskStorage({
+    destination: (_req, _file, cb) => cb(null, COMPETITION_DOCS_DIR),
+    filename: (_req, file, cb) => {
+      const ext = path.extname(file.originalname).toLowerCase() || ".pdf";
+      cb(null, `${randomUUID()}${ext}`);
+    },
+  }),
+  fileFilter: createCompetitionDocFilter,
+  limits: { fileSize: MAX_COMPETITION_DOC_SIZE },
+});
+
+export function getCompetitionDocPublicUrl(filename: string): string {
+  const baseUrl = process.env.PUBLIC_URL ?? `http://localhost:${process.env.PORT ?? 4000}`;
+  return `${baseUrl}/uploads/competition-docs/${filename}`;
+}
+
+export function deleteCompetitionDocFile(filename: string | null) {
+  if (!filename) return;
+  const filePath = path.join(COMPETITION_DOCS_DIR, filename);
   if (fs.existsSync(filePath)) {
     fs.unlinkSync(filePath);
   }
