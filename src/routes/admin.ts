@@ -7,14 +7,20 @@ import {
   updateCompetitionHandler,
   getParticipantsHandler,
   publishResultsHandler,
+  getRegistrationDocumentsHandler,
+  updatePaymentStatusHandler,
+  createAnnouncementHandler,
 } from "../controllers/adminController";
 import { authenticate } from "../middleware/authenticate";
+import { generateCertificateHandler } from "../controllers/certificateController";
 import { requireRole } from "../middleware/requireRole";
 import { validateBody } from "../middleware/validate";
 import { validateQuery } from "../middleware/validateQuery";
 import {
   listUsersQuerySchema,
   verifyTutorSchema,
+  updatePaymentSchema,
+  createAnnouncementSchema,
 } from "../validators/admin";
 import {
   createCompetitionSchema,
@@ -43,5 +49,10 @@ router.post(
   validateBody(publishResultsSchema),
   publishResultsHandler
 );
+
+router.post("/certificates/generate", generateCertificateHandler);
+router.get("/competitions/:id/registrations/:regId/documents", getRegistrationDocumentsHandler);
+router.patch("/competitions/:id/registrations/:regId/payment", validateBody(updatePaymentSchema), updatePaymentStatusHandler);
+router.post("/announcements", validateBody(createAnnouncementSchema), createAnnouncementHandler);
 
 export default router;

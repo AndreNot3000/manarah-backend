@@ -40,7 +40,7 @@ export async function getAdminStats(): Promise<AdminStats> {
     prisma.competition.count(),
     prisma.competitionRegistration.count(),
     prisma.tutorProfile.count({ where: { status: "PENDING" } }),
-    prisma.payment.count({ where: { status: "PENDING" } }),
+    prisma.competitionRegistration.count({ where: { paymentStatus: "PENDING" } }),
   ]);
 
   return {
@@ -163,6 +163,7 @@ import {
   UpdateCompetitionInput,
   PublishResultsInput,
 } from "../validators/competition";
+import { CreateAnnouncementInput } from "../validators/admin";
 import { CompetitionStatus, CompetitionType, RegistrationStatus } from "@prisma/client";
 
 export interface AdminCompetitionResponse {
@@ -359,6 +360,15 @@ export async function publishResults(
     );
   }
 
+  // Update placement ranks in database
+  const updatePlacementPromises = input.winners.map((winner) => {
+    return prisma.competitionRegistration.updateMany({
+      where: { competitionId, userId: winner.userId },
+      data: { placement: winner.placement },
+    });
+  });
+  await Promise.all(updatePlacementPromises);
+
   // Update competition status to RESULTS_PUBLISHED
   const updated = await prisma.competition.update({
     where: { id: competitionId },
@@ -378,4 +388,34 @@ export async function publishResults(
   await Promise.all(notificationPromises);
 
   return mapAdminCompetition(updated);
+}
+
+export async function createAnnouncement(
+  input: CreateAnnouncementInput
+) {
+  // Create announcement in database
+  const announcement = await prisma.announcement.create({
+    data: {
+      title: input.title,
+      body: input.body,
+    },
+  });
+
+  // Fetch all users in database
+  const users = await prisma.user.findMany({
+    select: { id: true },
+  });
+
+  // Create notifications in background parallel
+  const notificationPromises = users.map((u) => {
+    return createNotification(u.id, `Broadcast: ${input.title}`, input.body);
+  });
+  await Promise.all(notificationPromises);
+
+  return {
+    id: announcement.id,
+    title: announcement.title,
+    body: announcement.body,
+    createdAt: announcement.createdAt.toISOString(),
+  };
 }

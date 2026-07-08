@@ -14,3 +14,16 @@ export const verifyTutorSchema = z.object({
 });
 
 export type VerifyTutorInput = z.infer<typeof verifyTutorSchema>;
+
+export const updatePaymentSchema = z.object({
+  status: z.enum(["CONFIRMED", "REJECTED"]),
+});
+
+export type UpdatePaymentInput = z.infer<typeof updatePaymentSchema>;
+
+export const createAnnouncementSchema = z.object({
+  title: z.string().trim().min(1, "Title is required").max(200),
+  body: z.string().trim().min(1, "Body is required"),
+});
+
+export type CreateAnnouncementInput = z.infer<typeof createAnnouncementSchema>;

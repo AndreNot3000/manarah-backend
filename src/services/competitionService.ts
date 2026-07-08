@@ -52,6 +52,12 @@ export interface CompetitionDetail extends CompetitionListItem {
     paymentStatus: PaymentStatus;
     documents: CompetitionDocument[];
   };
+  winners?: {
+    userId: string;
+    name: string;
+    email: string;
+    placement: number;
+  }[];
 }
 
 export interface CompetitionListResponse {
@@ -181,6 +187,22 @@ export async function getCompetitionById(
       )[0]
     : undefined;
 
+  // If results are published, fetch placements to construct leaderboard details
+  let winners: CompetitionDetail["winners"] = undefined;
+  if (competition.status === CompetitionStatus.RESULTS_PUBLISHED) {
+    const winnerRegs = await prisma.competitionRegistration.findMany({
+      where: { competitionId, placement: { not: null } },
+      include: { user: { include: { studentProfile: true } } },
+      orderBy: { placement: "asc" },
+    });
+    winners = winnerRegs.map(w => ({
+      userId: w.userId,
+      name: w.user.studentProfile?.name ?? w.user.email.split("@")[0],
+      email: w.user.email,
+      placement: w.placement!,
+    }));
+  }
+
   return {
     ...base,
     registrationCount: competition._count.registrations,
@@ -194,6 +216,7 @@ export async function getCompetitionById(
           },
         }
       : {}),
+    winners,
   };
 }
 
@@ -380,4 +403,35 @@ export async function listCompetitionDocuments(
     registrationId: registration.id,
     documents: registration.documents.map(mapDocument),
   };
+}
+
+export async function getRegistrationDocuments(registrationId: string): Promise<CompetitionDocument[]> {
+  const documents = await prisma.competitionDocument.findMany({
+    where: { registrationId },
+    orderBy: { uploadedAt: "desc" },
+  });
+  return documents.map(mapDocument);
+}
+
+export async function updatePaymentStatus(registrationId: string, status: PaymentStatus): Promise<void> {
+  const registration = await prisma.competitionRegistration.findUnique({
+    where: { id: registrationId },
+    include: { competition: true },
+  });
+
+  if (!registration) {
+    throw new AppError("Registration not found", 404, "REGISTRATION_NOT_FOUND");
+  }
+
+  await prisma.competitionRegistration.update({
+    where: { id: registrationId },
+    data: { paymentStatus: status },
+  });
+
+  // Notify student
+  await createNotification(
+    registration.userId,
+    "Payment Review Update",
+    `Your payment receipt for "${registration.competition.title}" has been ${status === "CONFIRMED" ? "APPROVED" : "REJECTED"}.`
+  );
 }

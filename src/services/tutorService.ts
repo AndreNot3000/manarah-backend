@@ -158,7 +158,6 @@ export async function getPublicTutorById(tutorId: string): Promise<TutorDetail> 
   const tutor = await prisma.tutorProfile.findFirst({
     where: {
       userId: tutorId,
-      status: { in: PUBLIC_TUTOR_STATUSES },
     },
     include: detailInclude,
   });

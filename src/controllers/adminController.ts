@@ -8,12 +8,15 @@ import {
   getCompetitionParticipants,
   buildParticipantsCsv,
   publishResults,
+  createAnnouncement,
 } from "../services/adminService";
+import { getRegistrationDocuments, updatePaymentStatus } from "../services/competitionService";
 import { handleControllerError, AppError } from "../utils/errors";
 import { getValidatedQuery } from "../middleware/validateQuery";
 import {
   ListUsersQuery,
   VerifyTutorInput,
+  CreateAnnouncementInput,
 } from "../validators/admin";
 import {
   CreateCompetitionInput,
@@ -126,6 +129,62 @@ export async function publishResultsHandler(req: Request, res: Response) {
     const input = req.body as PublishResultsInput;
     const competition = await publishResults(competitionId, input);
     res.json({ competition });
+  } catch (error) {
+    handleControllerError(res, error);
+  }
+}
+
+// -------------------------------------------
+// New Handlers for receipt review and payment status
+// -------------------------------------------
+/**
+ * GET /competitions/:id/registrations/:regId/documents
+ * Returns the list of uploaded receipt documents for a registration.
+ */
+export async function getRegistrationDocumentsHandler(req: Request, res: Response) {
+  try {
+    const competitionId = String(req.params.id ?? "");
+    const registrationId = String(req.params.regId ?? "");
+    if (!competitionId || !registrationId) {
+      res.status(400).json({ error: "Competition ID and Registration ID are required" });
+      return;
+    }
+    const docs = await getRegistrationDocuments(registrationId);
+    res.json({ documents: docs });
+  } catch (error) {
+    handleControllerError(res, error);
+  }
+}
+
+/**
+ * PATCH /competitions/:id/registrations/:regId/payment
+ * Admin can approve (CONFIRMED) or reject (REJECTED) a payment.
+ */
+export async function updatePaymentStatusHandler(req: Request, res: Response) {
+  try {
+    const competitionId = String(req.params.id ?? "");
+    const registrationId = String(req.params.regId ?? "");
+    if (!competitionId || !registrationId) {
+      res.status(400).json({ error: "Competition ID and Registration ID are required" });
+      return;
+    }
+    const { status } = req.body as { status: "CONFIRMED" | "REJECTED" };
+    await updatePaymentStatus(registrationId, status);
+    res.json({ message: "Payment status updated" });
+  } catch (error) {
+    handleControllerError(res, error);
+  }
+}
+
+/**
+ * POST /announcements
+ * Admin can broadcast an announcement to all registered users.
+ */
+export async function createAnnouncementHandler(req: Request, res: Response) {
+  try {
+    const input = req.body as CreateAnnouncementInput;
+    const result = await createAnnouncement(input);
+    res.status(201).json({ message: "Announcement broadcasted successfully", announcement: result });
   } catch (error) {
     handleControllerError(res, error);
   }
