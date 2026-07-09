@@ -222,6 +222,22 @@ function mapAdminCompetition(c: {
   };
 }
 
+async function notifyStudentsNewCompetition(title: string, category: string) {
+  const students = await prisma.user.findMany({
+    where: { role: UserRole.STUDENT },
+    select: { id: true },
+  });
+
+  const notificationPromises = students.map((student) => {
+    return createNotification(
+      student.id,
+      "New Competition Open!",
+      `A new competition "${title}" (${category}) is now open for registration. Access your dashboard to register!`
+    );
+  });
+  await Promise.all(notificationPromises);
+}
+
 export async function createCompetition(
   input: CreateCompetitionInput
 ): Promise<AdminCompetitionResponse> {
@@ -236,6 +252,12 @@ export async function createCompetition(
       status: input.status ?? CompetitionStatus.DRAFT,
     },
   });
+
+  if (competition.status === CompetitionStatus.OPEN) {
+    notifyStudentsNewCompetition(competition.title, competition.category).catch((err) => {
+      console.error("Failed to notify students of new competition:", err);
+    });
+  }
 
   return mapAdminCompetition(competition);
 }
@@ -264,6 +286,12 @@ export async function updateCompetition(
       ...(input.status !== undefined ? { status: input.status } : {}),
     },
   });
+
+  if (input.status === CompetitionStatus.OPEN && existing.status !== CompetitionStatus.OPEN) {
+    notifyStudentsNewCompetition(competition.title, competition.category).catch((err) => {
+      console.error("Failed to notify students of new competition:", err);
+    });
+  }
 
   return mapAdminCompetition(competition);
 }

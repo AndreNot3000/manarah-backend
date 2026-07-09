@@ -37,6 +37,8 @@ function mapNotification(notification: {
   };
 }
 
+import { sendNotificationEmail } from "./emailService";
+
 export async function createNotification(
   userId: string,
   title: string,
@@ -44,6 +46,20 @@ export async function createNotification(
 ): Promise<NotificationResponse> {
   const notification = await prisma.notification.create({
     data: { userId, title, body },
+  });
+
+  // Async query and send of email alerts
+  prisma.user.findUnique({
+    where: { id: userId },
+    select: { email: true },
+  }).then((user) => {
+    if (user?.email) {
+      sendNotificationEmail(user.email, title, body).catch((err) => {
+        console.error(`Failed to send notification email to ${user.email}:`, err);
+      });
+    }
+  }).catch((err) => {
+    console.error(`Failed to lookup email configuration for user ${userId}:`, err);
   });
 
   return mapNotification(notification);

@@ -24,7 +24,18 @@ app.use(
 );
 app.use(
   cors({
-    origin: FRONTEND_URL,
+    origin: (origin, callback) => {
+      if (
+        !origin ||
+        origin.startsWith("http://localhost:") ||
+        origin.endsWith(".vercel.app") ||
+        origin === process.env.FRONTEND_URL
+      ) {
+        callback(null, true);
+      } else {
+        callback(new Error("Not allowed by CORS"));
+      }
+    },
     credentials: true,
   })
 );

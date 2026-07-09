@@ -11,6 +11,8 @@ import {
   ResetPasswordInput,
 } from "../validators/auth";
 
+import { sendWelcomeEmail, sendPasswordResetEmail } from "./emailService";
+
 export class AuthError extends Error {
   constructor(
     message: string,
@@ -91,7 +93,14 @@ export async function registerStudent(input: RegisterStudentInput) {
       });
     });
 
-    return createAuthResponse(formatUser(user));
+    const response = createAuthResponse(formatUser(user));
+
+    // Send welcome email asynchronously
+    sendWelcomeEmail(user.email, input.name, "STUDENT").catch((err) => {
+      console.error("Failed to send student welcome email:", err);
+    });
+
+    return response;
   } catch (error) {
     handlePrismaError(error);
   }
@@ -124,7 +133,14 @@ export async function registerTutor(input: RegisterTutorInput) {
       });
     });
 
-    return createAuthResponse(formatUser(user));
+    const response = createAuthResponse(formatUser(user));
+
+    // Send welcome email asynchronously
+    sendWelcomeEmail(user.email, input.name, "TUTOR").catch((err) => {
+      console.error("Failed to send tutor welcome email:", err);
+    });
+
+    return response;
   } catch (error) {
     handlePrismaError(error);
   }
@@ -161,6 +177,13 @@ export async function forgotPassword(input: ForgotPasswordInput) {
 
   if (user) {
     const resetToken = signPasswordResetToken(user.id);
+    const frontendUrl = process.env.FRONTEND_URL || "http://localhost:3000";
+    const resetLink = `${frontendUrl}/reset-password?token=${resetToken}`;
+
+    // Send reset link email asynchronously
+    sendPasswordResetEmail(user.email, resetLink).catch((err) => {
+      console.error("Failed to send password reset email:", err);
+    });
 
     if (process.env.NODE_ENV !== "production") {
       console.log(`[password-reset] email=${user.email} token=${resetToken}`);
